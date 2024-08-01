@@ -5,8 +5,9 @@ import joblib
 import pandas as pd
 import numpy as np
 
-# Load the model
-model_fit = joblib.load('app/model.joblib')
+# Load the models
+knn_model = joblib.load('app/knn_model.joblib')
+linear_model = joblib.load('app/linear_model.joblib')
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -20,13 +21,19 @@ def predict(date_str: str = Form(...)):
     # Convert the input date string to a datetime format
     date = pd.to_datetime(date_str, format='%Y-%m-%d')
     
-    # Convert the date to year number
-    year_number = date.year
+    # Extract year, month, and day for feature array
+    year = date.year
+    month = date.month
+    day = date.day
     
     # Create a feature array for prediction
-    features = np.array([[year_number]])
+    features = np.array([[year, month, day]])
     
-    # Forecast the cotton prices for the input date
-    predicted_value = model_fit.predict(features)[0]
+    # Use KNN model before April 2024 and Linear Regression model after that date
+    cutoff_date = pd.to_datetime('2024-04-01')
+    if date < cutoff_date:
+        predicted_value = knn_model.predict(features)[0]
+    else:
+        predicted_value = linear_model.predict(features)[0]
 
     return {'predicted': predicted_value}
